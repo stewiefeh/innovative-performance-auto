@@ -1,4 +1,6 @@
-/* Innovative Performance Auto — live hours, day highlight, light motion */
+/* Innovative Performance Auto — live hours, day highlight, nav state, light motion.
+   Motion is transform/opacity only; scroll work runs through IntersectionObserver,
+   never scroll-position reads. */
 (function () {
   "use strict";
 
@@ -40,7 +42,6 @@
     if (today && t.minutes >= today.open && t.minutes < today.close) {
       return { open: true, text: "Open now · closes " + fmtTime(today.close) };
     }
-    // find next opening, today evening or a later day
     for (var i = 0; i < 7; i++) {
       var d = (t.day + i) % 7;
       var h = HOURS[d];
@@ -80,7 +81,7 @@
     }
   }
 
-  // Header rule on scroll
+  // Header state
   var head = document.querySelector(".site-head");
   var onScroll = function () {
     head.classList.toggle("scrolled", window.scrollY > 8);
@@ -88,13 +89,70 @@
   window.addEventListener("scroll", onScroll, { passive: true });
   onScroll();
 
-  // One-time reveal on scroll
+  // Mobile menu
+  var toggle = document.querySelector(".nav-toggle");
+  var open = function (on) {
+    head.classList.toggle("menu-open", on);
+    toggle.setAttribute("aria-expanded", on ? "true" : "false");
+  };
+  toggle.addEventListener("click", function () {
+    open(!head.classList.contains("menu-open"));
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && head.classList.contains("menu-open")) {
+      open(false);
+      toggle.focus();
+    }
+  });
+  var menuLinks = document.querySelectorAll(".mobile-menu a");
+  for (var j = 0; j < menuLinks.length; j++) {
+    menuLinks[j].addEventListener("click", function () { open(false); });
+  }
+  window.addEventListener("resize", function () {
+    if (window.innerWidth > 760 && head.classList.contains("menu-open")) open(false);
+  });
+
+  // Scrollspy: mark the section in view on the nav
+  var spySections = ["reviews", "services", "visit"];
+  var navLinks = {};
+  document.querySelectorAll(".site-nav a").forEach(function (a) {
+    var id = (a.getAttribute("href") || "").replace("#", "");
+    if (spySections.indexOf(id) !== -1) navLinks[id] = a;
+  });
+  if ("IntersectionObserver" in window) {
+    var spy = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        var link = navLinks[e.target.id];
+        if (!link) return;
+        if (e.isIntersecting) {
+          for (var k in navLinks) navLinks[k].classList.remove("active");
+          link.classList.add("active");
+        }
+      });
+    }, { rootMargin: "-40% 0px -55% 0px", threshold: 0 });
+    spySections.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) spy.observe(el);
+    });
+  }
+
+  // Staggered reveals, one per group
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var groups = [".straight-grid", ".reviews-grid", ".services-list", ".specs"];
+  groups.forEach(function (sel) {
+    var parent = document.querySelector(sel);
+    if (!parent) return;
+    var kids = parent.querySelectorAll(":scope > .straight-item, :scope > .review, :scope > li, :scope > .spec");
+    for (var n = 0; n < kids.length; n++) {
+      kids[n].style.setProperty("--d", (n * 70) + "ms");
+    }
+  });
+
   var targets = document.querySelectorAll(
-    ".straight-item, .straight-photo, .review, .services-list li, .services-note, .visit-info, .visit-photo"
+    ".section-title, .straight-item, .review, .services-list li, .services-note, .visit-info, .visit-photo, .spec"
   );
   if (reduce || !("IntersectionObserver" in window)) {
-    targets.forEach ? targets.forEach(function (el) { el.classList.add("in"); }) : null;
+    targets.forEach(function (el) { el.classList.add("in"); });
   } else {
     targets.forEach(function (el) { el.classList.add("fade-item"); });
     var io = new IntersectionObserver(function (entries) {
@@ -104,14 +162,13 @@
           io.unobserve(e.target);
         }
       });
-    }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+    }, { threshold: 0.1, rootMargin: "0px 0px -6% 0px" });
     targets.forEach(function (el) { io.observe(el); });
   }
-  // Fail-open: if anything is still hidden after 2.5s (no scroll events, embedded
-  // viewers, odd rendering environments), show it rather than leave blank sections.
+  // Fail-open: anything still hidden after 2.5s shows anyway.
   setTimeout(function () {
-    document.querySelectorAll('.fade-item:not(.in)').forEach(function (el) {
-      el.classList.add('in');
+    document.querySelectorAll(".fade-item:not(.in)").forEach(function (el) {
+      el.classList.add("in");
     });
   }, 2500);
 })();
