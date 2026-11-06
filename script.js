@@ -138,18 +138,18 @@
 
   // Staggered reveals, one per group
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var groups = [".straight-grid", ".reviews-grid", ".services-list", ".specs"];
+  var groups = [".straight-grid", ".reviews-grid", ".services-list"];
   groups.forEach(function (sel) {
     var parent = document.querySelector(sel);
     if (!parent) return;
-    var kids = parent.querySelectorAll(":scope > .straight-item, :scope > .review, :scope > li, :scope > .spec");
+    var kids = parent.querySelectorAll(":scope > .straight-item, :scope > .review, :scope > li");
     for (var n = 0; n < kids.length; n++) {
-      kids[n].style.setProperty("--d", (n * 70) + "ms");
+      kids[n].style.setProperty("--d", (n * 60) + "ms");
     }
   });
 
   var targets = document.querySelectorAll(
-    ".section-title, .straight-item, .review, .services-list li, .services-note, .visit-info, .visit-photo, .spec"
+    ".section-title, .straight-item, .review, .services-list li, .services-note, .visit-info, .visit-photo"
   );
   if (reduce || !("IntersectionObserver" in window)) {
     targets.forEach(function (el) { el.classList.add("in"); });
@@ -170,5 +170,5 @@
     document.querySelectorAll(".fade-item:not(.in)").forEach(function (el) {
       el.classList.add("in");
     });
-  }, 2500);
+  }, 1200);
 })();
