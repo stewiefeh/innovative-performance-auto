@@ -107,4 +107,11 @@
     }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
     targets.forEach(function (el) { io.observe(el); });
   }
+  // Fail-open: if anything is still hidden after 2.5s (no scroll events, embedded
+  // viewers, odd rendering environments), show it rather than leave blank sections.
+  setTimeout(function () {
+    document.querySelectorAll('.fade-item:not(.in)').forEach(function (el) {
+      el.classList.add('in');
+    });
+  }, 2500);
 })();
